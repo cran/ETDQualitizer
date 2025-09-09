@@ -1,0 +1,31 @@
+Package: ETDQualitizer
+Type: Package
+Title: Automated Eye Tracking Data Quality Determination for
+        Screen-Based Eye Trackers
+Version: 0.9.0
+Authors@R: c(
+    person(
+      "Diederick", "Niehorster",
+      email = "diederick_c.niehorster@humlab.lu.se",
+      role = c("aut", "cre", "cph"),
+      comment = c(ORCID = "0000-0002-4672-8756")
+    )
+  )
+Maintainer: Diederick Niehorster <diederick_c.niehorster@humlab.lu.se>
+Description: Compute common data quality metrics for accuracy, precision and data loss
+  for screen-based eye trackers. Supports input data both in pixels on the screen and
+  in degrees, output measures are (where appropriate) expressed as angles in degrees.
+License: MIT + file LICENSE
+URL: https://github.com/dcnieho/ETDQualitizer
+BugReports: https://github.com/dcnieho/ETDQualitizer/issues
+Encoding: UTF-8
+Imports: R6, stats
+Suggests: testthat (>= 3.0.0)
+Config/testthat/edition: 3
+RoxygenNote: 7.3.2
+NeedsCompilation: no
+Packaged: 2025-09-03 20:44:39 UTC; huml-dkn
+Author: Diederick Niehorster [aut, cre, cph] (ORCID:
+    <https://orcid.org/0000-0002-4672-8756>)
+Repository: CRAN
+Date/Publication: 2025-09-09 13:50:07 UTC
