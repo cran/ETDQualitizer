@@ -13,7 +13,7 @@ library(stats)
 #'
 #' @export
 ETDQ_version <- function() {
-  return("0.9.0")
+  return("1.0.0")
 }
 
 
@@ -58,37 +58,63 @@ vector_to_Fick <- function(x, y, z) {
   list(azi = azi, ele = ele)
 }
 
+call_summary_fun <- function(fun, x) {
+  fun_formals <- formals(fun)
+  if (!is.null(fun_formals) && ("na.rm" %in% names(fun_formals) || "..." %in% names(fun_formals))) {
+    return(fun(x, na.rm = TRUE))
+  }
+
+  fun(x[!is.na(x)])
+}
+
 
 #' Compute Gaze Accuracy
 #'
-#' Calculates the angular offset between gaze and target directions.
+#' Calculates the angular offset between gaze and target directions by first
+#' computing a central gaze direction in 3D and then expressing this direction
+#' relative to the target.
 #'
 #' @param azi Gaze azimuth in degrees.
 #' @param ele Gaze elevation in degrees.
 #' @param target_azi Target azimuth in degrees.
 #' @param target_ele Target elevation in degrees.
-#' @param central_tendency_fun Function to compute central tendency (default: \code{mean}).
+#' @param central_tendency_fun Function to compute central tendency of the Cartesian gaze components (default: \code{mean}).
 #'
 #' @return A list with \code{offset}, \code{offset_azi}, and \code{offset_ele}, the total, horizontal and vertical offset of gaze from the target (in degrees).
 #' @examples
 #' accuracy(c(1, 2), c(1, 2), 0, 0)
 #' @export
 accuracy <- function(azi, ele, target_azi, target_ele, central_tendency_fun = mean) {
-  # Get unit vectors from gaze directions
+  # convert gaze directions to unit vectors
   g <- Fick_to_vector(azi, ele)
-  t <- Fick_to_vector(target_azi, target_ele)
-  # calculate angular offset for each sample using dot product
-  dot_products <- g$x*t$x + g$y*t$y + g$z*t$z
-  dot_products <- pmin(pmax(dot_products, -1), 1)  # Clamp to [-1,1]
-  offsets      <- acos(dot_products)
-  # calculate on-screen orientation so we can decompose offset into x and y
-  direction    <- atan2(g$y/g$z-t$y/t$z, g$x/g$z-t$x/t$z)
-  offsets_2D   <- offsets*cbind(cos(direction), sin(direction)) * 180/pi
-  # calculate mean horizontal and vertical offsets
-  offset_azi   <- central_tendency_fun(offsets_2D[, 1], na.rm = TRUE)
-  offset_ele   <- central_tendency_fun(offsets_2D[, 2], na.rm = TRUE)
-  # calculate offset of centroid
-  offset       <- sqrt(offset_azi^2 + offset_ele^2)
+
+  # compute central gaze direction in 3D
+  g_vec <- c(
+    call_summary_fun(central_tendency_fun, g$x),
+    call_summary_fun(central_tendency_fun, g$y),
+    call_summary_fun(central_tendency_fun, g$z)
+  )
+
+  # normalize to unit vector
+  g_vec <- g_vec / sqrt(sum(g_vec^2))
+
+  # precompute trigonometric terms for target orientation
+  ca <- cos(target_azi * pi/180); sa <- sin(target_azi * pi/180)
+  ce <- cos(target_ele * pi/180); se <- sin(target_ele * pi/180)
+
+  # express central gaze direction in a target-centered frame
+  x_rel <-  ca*g_vec[1] - sa*g_vec[3]
+  y_rel <-  ce*g_vec[2] - se*(sa*g_vec[1] + ca*g_vec[3])
+  z_rel <-  se*g_vec[2] + ce*(sa*g_vec[1] + ca*g_vec[3])
+
+  # decompose relative direction into Fick components
+  f <- vector_to_Fick(x_rel, y_rel, z_rel)
+  offset_azi <- f$azi
+  offset_ele <- f$ele
+
+  # compute total angular offset
+  offset <- atan2(sqrt(x_rel^2 + y_rel^2), z_rel) * 180/pi
+
   list(offset = offset, offset_azi = offset_azi, offset_ele = offset_ele)
 }
 
@@ -107,9 +133,9 @@ accuracy <- function(azi, ele, target_azi, target_ele, central_tendency_fun = me
 rms_s2s <- function(azi, ele, central_tendency_fun = mean) {
   a_diff  <- diff(azi)^2
   e_diff  <- diff(ele)^2
-  rms_azi <- sqrt(central_tendency_fun(a_diff, na.rm = TRUE))
-  rms_ele <- sqrt(central_tendency_fun(e_diff, na.rm = TRUE))
-  rms     <- sqrt(central_tendency_fun(a_diff + e_diff, na.rm = TRUE))
+  rms_azi <- sqrt(call_summary_fun(central_tendency_fun, a_diff))
+  rms_ele <- sqrt(call_summary_fun(central_tendency_fun, e_diff))
+  rms     <- sqrt(call_summary_fun(central_tendency_fun, a_diff + e_diff))
   list(rms = rms, rms_azi = rms_azi, rms_ele = rms_ele)
 }
 
@@ -280,7 +306,7 @@ precision_using_moving_window <- function(azi, ele, window_length, metric, aggre
       result <- fun(azi[p:(p + window_length - 1)], ele[p:(p + window_length - 1)], ...)
       values[p] <- result[[1]]  # extract first element (e.g., rms, std, or area)
     }
-    precision <- aggregation_fun(values, na.rm = TRUE)
+    precision <- call_summary_fun(aggregation_fun, values)
   } else {
     # If too few samples in data
     precision <- NA_real_
@@ -546,7 +572,7 @@ DataQuality <- R6Class("DataQuality",
     #' @param ... Additional arguments passed to the precision metric function.
     #' @return Precision value.
     #' @examples
-    #' dq$precision_using_moving_window(0.2, "RMS-S2S")
+    #' dq$precision_using_moving_window(20, "RMS-S2S")
     precision_using_moving_window = function(window_length, metric, aggregation_fun = median, ...) {
       precision_using_moving_window(self$azi, self$ele, window_length, metric, aggregation_fun, ...)
     }
@@ -572,7 +598,7 @@ DataQuality <- R6Class("DataQuality",
 #'
 #' @return A `data.frame` with one row per eye-target combination, containing computed metrics:
 #'   - `eye`, `target_id`: identifiers
-#'   - `offset`, `offset_x`, `offset_y`: accuracy metrics (`offset_x`, `offset_y` only if `advanced` is `TRUE`)
+#'   - `accuracy`, `accuracy_x`, `accuracy_y`: accuracy metrics (`accuracy_x`, `accuracy_y` only if `advanced` is `TRUE`)
 #'   - `rms_s2s`, `rms_s2s_x`, `rms_s2s_y`: precision (RMS sample-to-sample) (`rms_s2s_x`, `rms_s2s_y` only if `advanced` is `TRUE`)
 #'   - `std`, `std_x`, `std_y`: precision (standard deviation) (`std_x`, `std_y` only if `advanced` is `TRUE`)
 #'   - `bcea`, `bcea_orientation`, `bcea_ax1`, `bcea_ax2`, `bcea_aspect_ratio`: precision (BCEA metrics) (`bcea_orientation`, `bcea_ax1`, `bcea_ax2`, `bcea_aspect_ratio` only if `advanced` is `TRUE`)
@@ -584,6 +610,9 @@ DataQuality <- R6Class("DataQuality",
 #'
 #' @examples
 #' \dontrun{
+#' # NB: this example requires a gaze data table to run. See the complete example at
+#' # https://github.com/dcnieho/ETDQualitizer/blob/master/example/R.R for how to prepare
+#' # the input data for this function
 #' dq <- compute_data_quality_from_validation(gaze_data, unit = "pixels", screen = my_screen_config)
 #' }
 #'
@@ -621,7 +650,7 @@ compute_data_quality_from_validation <- function(gaze, unit, screen = NULL, adva
   eyes <- eyes[have_eye]
 
   # Prepare output table
-  vars <- c("eye", "target_id", "offset", "offset_x", "offset_y",
+  vars <- c("eye", "target_id", "accuracy", "accuracy_x", "accuracy_y",
             "rms_s2s", "rms_s2s_x", "rms_s2s_y",
             "std", "std_x", "std_y",
             "bcea", "bcea_orientation", "bcea_ax1", "bcea_ax2", "bcea_aspect_ratio")
@@ -655,7 +684,7 @@ compute_data_quality_from_validation <- function(gaze, unit, screen = NULL, adva
 
       dq$eye[oi] <- eye
       dq$target_id[oi] <- t_id
-      dq[oi, c("offset", "offset_x", "offset_y")] <- dq_calc$accuracy(target_locations[t, 1], target_locations[t, 2])
+      dq[oi, c("accuracy", "accuracy_x", "accuracy_y")] <- dq_calc$accuracy(target_locations[t, 1], target_locations[t, 2])
       dq[oi, c("rms_s2s", "rms_s2s_x", "rms_s2s_y")] <- dq_calc$precision_RMS_S2S()
       dq[oi, c("std", "std_x", "std_y")] <- dq_calc$precision_STD()
       dq[oi, c("bcea", "bcea_orientation", "bcea_ax1", "bcea_ax2", "bcea_aspect_ratio")] <- dq_calc$precision_BCEA()
@@ -669,7 +698,7 @@ compute_data_quality_from_validation <- function(gaze, unit, screen = NULL, adva
 
   # Drop advanced metrics if not requested
   if (!advanced) {
-    keep_vars <- c("eye", "target_id", "offset", "rms_s2s", "std", "bcea")
+    keep_vars <- c("eye", "target_id", "accuracy", "rms_s2s", "std", "bcea")
     if (include_data_loss) {
       keep_vars <- c(keep_vars, "data_loss", "effective_frequency")
     }
@@ -685,7 +714,7 @@ compute_data_quality_from_validation <- function(gaze, unit, screen = NULL, adva
 #' This function summarizes data quality metrics from a validation procedure by computing averages per participant and generating descriptive statistics across participants.
 #' It also returns a formatted textual summary suitable for reporting.
 #'
-#' @param dq_table A `data.frame` containing data quality metrics. Must include columns `file`, `eye`, `target_id`, and relevant numeric metrics such as `offset`, `rms_s2s`, and `std`.
+#' @param dq_table A `data.frame` containing data quality metrics. Must include columns `file`, `eye`, `target_id`, and relevant numeric metrics such as `accuracy`, `rms_s2s`, and `std`.
 #'  This would generally be created by concatenating the output of the compute_data_quality_from_validation() for multiple files.
 #'
 #' @return A named list with two elements:
@@ -704,6 +733,9 @@ compute_data_quality_from_validation <- function(gaze, unit, screen = NULL, adva
 #'
 #' @examples
 #' \dontrun{
+#' # NB: this example requires a gaze data table to run. See the complete example at
+#' # https://github.com/dcnieho/ETDQualitizer/blob/master/example/R.R for how to prepare
+#' # the input data for this function
 #' result <- report_data_quality_table(dq_table)
 #' cat(result$txt)
 #' head(result$measures$all)
@@ -733,9 +765,9 @@ report_data_quality_table <- function(dq_table) {
   version  <- ETDQ_version()  # Assumes this function exists
 
   txt <- sprintf(
-    "For %d participants, the average inaccuracy in the data determined from a %d-point validation procedure using ETDQualitizer v%s (Niehorster et al., in prep) was %.2f\u00b0 (SD=%.2f\u00b0, range=%.2f\u00b0--%.2f\u00b0). Average RMS-S2S precision was %.3f\u00b0 (SD=%.3f\u00b0, range=%.3f\u00b0--%.3f\u00b0) and STD precision %.3f\u00b0 (SD=%.3f\u00b0, range=%.3f\u00b0--%.3f\u00b0).",
+    "For %d participants, the average inaccuracy in the data determined from a %d-point validation procedure using ETDQualitizer v%s (Niehorster et al., 2026) was %.2f\u00b0 (SD=%.2f\u00b0, range=%.2f\u00b0--%.2f\u00b0). Average RMS-S2S precision was %.3f\u00b0 (SD=%.3f\u00b0, range=%.3f\u00b0--%.3f\u00b0) and STD precision %.3f\u00b0 (SD=%.3f\u00b0, range=%.3f\u00b0--%.3f\u00b0).",
     n_subj, n_target, version,
-    measures$mean["offset"], measures$std["offset"], measures$min["offset"], measures$max["offset"],
+    measures$mean["accuracy"], measures$std["accuracy"], measures$min["accuracy"], measures$max["accuracy"],
     measures$mean["rms_s2s"], measures$std["rms_s2s"], measures$min["rms_s2s"], measures$max["rms_s2s"],
     measures$mean["std"], measures$std["std"], measures$min["std"], measures$max["std"]
   )
