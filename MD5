@@ -1,7 +1,7 @@
-e755f2639b343002c1a217fd04f5d7ed *DESCRIPTION
+0b8a2b1339949d9214fe4df49a973329 *DESCRIPTION
 2c32ee689ea5098eb8e98cbaff96e6fd *LICENSE
 513e2e079b8b4be95cd53fe4d6717f97 *NAMESPACE
-b653c88d5937b929cfc39ee60fed972b *R/ETDQualitizer.R
+6908a5f17567cc7a59d4aa25f5ca55c7 *R/ETDQualitizer.R
 190300e7d46b43e8884f8758069e557b *man/DataQuality.Rd
 bec84454222c697ebdd04926ac49a22e *man/ETDQ_version.Rd
 b5a34b2cb5dee1c2319e4feba07475f2 *man/Fick_to_vector.Rd
@@ -18,6 +18,6 @@ d1f5825ec40d36db535d1e3fd7a82222 *man/data_loss_from_invalid.Rd
 dbd7f457cfe870d519921566bddea89f *man/std.Rd
 315ebb38dd86a6bc20672e7270a6cf17 *man/vector_to_Fick.Rd
 1b6763ba1023b349c0fc1af0b533b8d7 *tests/testthat/test-data_quality_class.R
-89ca9754747ea83bc3b2f9fd2dcac0d4 *tests/testthat/test-data_quality_metrics.R
+3b0be69a4ee6020d55ce45309ddf6670 *tests/testthat/test-data_quality_metrics.R
 07affbf0a3d296cc5ab48ba2981a8742 *tests/testthat/test-fick_conversions.R
 6351f8bf681e6896c929ac7947da576e *tests/testthat/test-screen_configuration.R

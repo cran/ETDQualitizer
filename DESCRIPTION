@@ -2,7 +2,7 @@ Package: ETDQualitizer
 Type: Package
 Title: Automated Eye Tracking Data Quality Determination for
         Screen-Based Eye Trackers
-Version: 1.0.0
+Version: 1.1.0
 Authors@R: c(
     person(
       "Diederick", "Niehorster",
@@ -16,7 +16,7 @@ Description: Compute common data quality metrics for accuracy, precision and dat
   for screen-based eye trackers. The package supports gaze input in screen pixels or
   degrees and reports angular measures in degrees where appropriate. If you use this
   package, please cite Niehorster, D.C., Nyström, M., Hessels, R.S., Benjamins, J.S.,
-  Andersson, R., and Hooge, I.T.C. (2026). The fundamentals of eye tracking part 7:
+  Andersson, R., and Hooge, I.T.C. (2026). The fundamentals of eye tracking, Part 7:
   Determining data quality. Behavior Research Methods. <doi:10.3758/s13428-026-03039-4>.
 License: MIT + file LICENSE
 URL: https://github.com/dcnieho/ETDQualitizer
@@ -27,8 +27,8 @@ Suggests: testthat (>= 3.0.0)
 Config/testthat/edition: 3
 RoxygenNote: 7.3.2
 NeedsCompilation: no
-Packaged: 2026-05-20 21:16:04 UTC; runner
+Packaged: 2026-06-07 22:17:16 UTC; runner
 Author: Diederick Niehorster [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0002-4672-8756>)
 Repository: CRAN
-Date/Publication: 2026-05-21 07:40:02 UTC
+Date/Publication: 2026-06-08 06:50:19 UTC
