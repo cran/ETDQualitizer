@@ -2,7 +2,7 @@ Package: ETDQualitizer
 Type: Package
 Title: Automated Eye Tracking Data Quality Determination for
         Screen-Based Eye Trackers
-Version: 1.1.0
+Version: 1.2.0
 Authors@R: c(
     person(
       "Diederick", "Niehorster",
@@ -27,8 +27,8 @@ Suggests: testthat (>= 3.0.0)
 Config/testthat/edition: 3
 RoxygenNote: 7.3.2
 NeedsCompilation: no
-Packaged: 2026-06-07 22:17:16 UTC; runner
+Packaged: 2026-10-19 10:18:36 UTC; runner
 Author: Diederick Niehorster [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0002-4672-8756>)
 Repository: CRAN
-Date/Publication: 2026-06-08 06:50:19 UTC
+Date/Publication: 2026-10-19 10:40:10 UTC
